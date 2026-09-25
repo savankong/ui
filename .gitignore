@@ -1,0 +1,8 @@
+assets/audio/
+out/frames/
+out/preview/
+out/at/
+out/*.png
+out/render.log
+out/loop.wav
+node_modules/

@@ -1,0 +1,90 @@
+{
+ "duration": 14,
+ "sounds": [
+  {
+   "t": 0,
+   "sfx": "click"
+  },
+  {
+   "t": 1.5,
+   "sfx": "chime"
+  },
+  {
+   "t": 3,
+   "sfx": "click"
+  },
+  {
+   "t": 3.5,
+   "sfx": "click"
+  },
+  {
+   "t": 4,
+   "sfx": "click",
+   "gain": 0.55
+  },
+  {
+   "t": 5,
+   "sfx": "tick",
+   "gain": 0.5
+  },
+  {
+   "t": 6,
+   "sfx": "click",
+   "gain": 0.55
+  },
+  {
+   "t": 7,
+   "sfx": "tick",
+   "gain": 0.6
+  },
+  {
+   "t": 8,
+   "sfx": "switch"
+  },
+  {
+   "t": 9,
+   "sfx": "tick"
+  },
+  {
+   "t": 9.5,
+   "sfx": "tick"
+  },
+  {
+   "t": 10,
+   "sfx": "whoosh",
+   "gain": 0.35
+  },
+  {
+   "t": 11,
+   "sfx": "tick",
+   "gain": 0.3
+  },
+  {
+   "t": 11.5,
+   "sfx": "tick",
+   "gain": 0.3
+  },
+  {
+   "t": 12.5,
+   "sfx": "key1"
+  },
+  {
+   "t": 12.625,
+   "sfx": "key2"
+  },
+  {
+   "t": 12.75,
+   "sfx": "key3"
+  },
+  {
+   "t": 13,
+   "sfx": "key1",
+   "gain": 1.2
+  },
+  {
+   "t": 13.06,
+   "sfx": "chime",
+   "gain": 0.8
+  }
+ ]
+}

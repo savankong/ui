@@ -1,0 +1,97 @@
+[
+ {
+  "t": 0,
+  "sfx": "click",
+  "peak_ms": 8.9
+ },
+ {
+  "t": 1.5,
+  "sfx": "chime",
+  "peak_ms": 25.7
+ },
+ {
+  "t": 3,
+  "sfx": "click",
+  "peak_ms": 8.9
+ },
+ {
+  "t": 3.5,
+  "sfx": "click",
+  "peak_ms": 8.9
+ },
+ {
+  "t": 4,
+  "sfx": "click",
+  "peak_ms": 8.9
+ },
+ {
+  "t": 5,
+  "sfx": "tick",
+  "peak_ms": 2.8
+ },
+ {
+  "t": 6,
+  "sfx": "click",
+  "peak_ms": 8.9
+ },
+ {
+  "t": 7,
+  "sfx": "tick",
+  "peak_ms": 2.8
+ },
+ {
+  "t": 8,
+  "sfx": "switch",
+  "peak_ms": 3.7
+ },
+ {
+  "t": 9,
+  "sfx": "tick",
+  "peak_ms": 2.8
+ },
+ {
+  "t": 9.5,
+  "sfx": "tick",
+  "peak_ms": 2.8
+ },
+ {
+  "t": 10,
+  "sfx": "whoosh",
+  "peak_ms": 713.2
+ },
+ {
+  "t": 11,
+  "sfx": "tick",
+  "peak_ms": 2.8
+ },
+ {
+  "t": 11.5,
+  "sfx": "tick",
+  "peak_ms": 2.8
+ },
+ {
+  "t": 12.5,
+  "sfx": "key1",
+  "peak_ms": 15.0
+ },
+ {
+  "t": 12.625,
+  "sfx": "key2",
+  "peak_ms": 15.0
+ },
+ {
+  "t": 12.75,
+  "sfx": "key3",
+  "peak_ms": 15.0
+ },
+ {
+  "t": 13,
+  "sfx": "key1",
+  "peak_ms": 15.0
+ },
+ {
+  "t": 13.06,
+  "sfx": "chime",
+  "peak_ms": 25.7
+ }
+]
