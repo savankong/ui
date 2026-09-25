@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Shape</title>
+<style>
+@font-face { font-family: Geist; src: url(assets/fonts/Geist-Variable.woff2) format("woff2"); font-weight: 100 900; }
+:root {
+  --canvas: #EAE7E2;
+  --ink: #0A0A0A;
+  --paper: #FFFFFF;
+  --mute: #8C8882;
+  --mute-dark: #8F8F8F;
+  --rail: #E6E3DE;
+}
+html, body { margin: 0; height: 100%; background: var(--canvas); }
+body { display: grid; place-items: center; overflow: hidden; }
+#stage {
+  position: relative; width: 1440px; height: 1440px; overflow: hidden;
+  background: var(--canvas); font-family: Geist, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased; color: var(--ink);
+  transform-origin: 50% 50%;
+}
+#cam { position: absolute; left: 720px; top: 720px; width: 0; height: 0; transform-origin: 0 0; }
+#shape {
+  position: absolute; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(20, 16, 12, .06), 0 14px 36px -12px rgba(20, 16, 12, .22);
+}
+#world { position: absolute; width: 0; height: 0; }
+.a { position: absolute; }
+.row { display: flex; align-items: center; white-space: nowrap; }
+.num { font-variant-numeric: tabular-nums; }
+svg { overflow: visible; }
+.ic { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+#cursor { position: absolute; left: 0; top: 0; width: 22px; height: 30px; transform-origin: 2px 2px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.28)); }
+#hud { position: fixed; left: 16px; bottom: 16px; font: 500 14px Geist, system-ui; color: #0A0A0A; display: flex; gap: 8px; }
+#hud button { font: inherit; border: 0; border-radius: 999px; padding: 10px 16px; background: #0A0A0A; color: #fff; cursor: pointer; }
+body.render #hud { display: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cam">
+    <div id="shape">
+      <div id="world">
+        <!-- Structural parts shared across states -->
+        <div id="track" class="a"><div id="fill" class="a"></div></div>
+
+        <!-- Tabs: base labels sit under the knob, the clipped copy sits on top -->
+        <div id="tabBg" class="a"></div>
+        <div id="tabsBase" class="a"></div>
+
+        <div id="knob" class="a"></div>
+        <div id="tabsClip" class="a"></div>
+
+        <!-- Content layers: each has its own enter/exit timing -->
+        <div id="L_btn" class="a row" style="left:-150px;top:-40px;width:300px;height:80px;justify-content:center;gap:10px;color:#fff;font-size:26px;font-weight:500;letter-spacing:-.01em">
+          Get started
+          <svg width="24" height="24" viewBox="0 0 24 24" class="ic" data-size="24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+
+        <svg id="L_loader" class="a" style="left:-18px;top:-18px;color:#fff" width="36" height="36" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" class="ic" opacity=".22" data-size="36"/>
+          <circle id="spinArc" cx="12" cy="12" r="9" class="ic" pathLength="1" stroke-dasharray="0.25 1" data-size="36"/>
+          <path id="loaderCheck" d="M7.5 12.4l3 3 6-6.2" class="ic" pathLength="1" stroke-dasharray="1 1" data-size="36"/>
+        </svg>
+
+        <div id="L_island" class="a" style="left:-180px;top:-42px;width:360px;height:84px">
+          <div class="a art" style="left:24px;top:16px;width:52px;height:52px;border-radius:14px"></div>
+          <div class="a" style="left:90px;top:0;height:84px;line-height:84px;color:#fff;font-size:20px;font-weight:500">House Vibes</div>
+          <div id="bars" class="a" style="left:286px;top:0;width:48px;height:84px"></div>
+        </div>
+
+        <div id="L_player" class="a" style="left:-230px;top:-150px;width:460px;height:300px">
+          <div class="a art" style="left:32px;top:32px;width:96px;height:96px;border-radius:18px"></div>
+          <div class="a" style="left:152px;top:40px;font-size:28px;font-weight:600;letter-spacing:-.015em">House Vibes</div>
+          <div class="a" style="left:152px;top:80px;font-size:20px;color:var(--mute)">Alejandro Magaña</div>
+          <div id="tEl" class="a num" style="left:32px;top:188px;font-size:17px;color:var(--mute)">0:42</div>
+          <div id="tRem" class="a num" style="right:32px;top:188px;font-size:17px;color:var(--mute);text-align:right">-1:12</div>
+          <svg class="a" style="left:115px;top:235px" width="30" height="30" viewBox="0 0 24 24"><path d="M18 6l-9 6 9 6z M6 6h2.5v12H6z" fill="#0A0A0A"/></svg>
+          <div id="playBtn" class="a" style="left:198px;top:218px;width:64px;height:64px;border-radius:32px;background:#0A0A0A">
+            <svg class="a" style="left:18px;top:18px" width="28" height="28" viewBox="0 0 24 24"><path id="ppPath" fill="#fff"/></svg>
+          </div>
+          <svg class="a" style="left:315px;top:235px" width="30" height="30" viewBox="0 0 24 24"><path d="M6 6l9 6-9 6z M15.5 6H18v12h-2.5z" fill="#0A0A0A"/></svg>
+        </div>
+
+        <svg id="L_vol" class="a" style="left:-200px;top:-16px" width="32" height="32" viewBox="0 0 24 24" color="#0A0A0A">
+          <path class="ic" data-size="32" d="M11 5L6 9H3v6h3l5 4V5z"/>
+          <path class="ic" data-size="32" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>
+        </svg>
+
+        <div id="L_chart" class="a" style="left:-300px;top:-240px;width:600px;height:480px">
+          <div class="a" style="left:32px;top:108px;font-size:18px;color:var(--mute-dark)">Revenue</div>
+          <div class="a row" style="left:32px;top:136px;gap:14px">
+            <span class="num" style="font-size:40px;font-weight:600;color:#fff;letter-spacing:-.02em">$184.2k</span>
+            <span class="num" style="font-size:16px;font-weight:500;color:#fff;background:#1C1C1C;border-radius:999px;padding:5px 11px">+12.4%</span>
+          </div>
+          <svg id="chartSvg" class="a" style="left:0;top:0" width="600" height="480" viewBox="-300 -240 600 480">
+            <defs><clipPath id="drawClip"><rect id="drawRect" x="-300" y="-240" width="0" height="480"/></clipPath></defs>
+            <g id="grid"></g>
+            <path id="area" fill="#fff" fill-opacity=".06" clip-path="url(#drawClip)"/>
+            <path id="line" class="ic" style="color:#fff" pathLength="1" stroke-dasharray="1 1" data-size="24" data-world="1"/>
+            <g id="hover">
+              <line id="hLine" stroke="#fff" stroke-opacity=".2" stroke-width="1"/>
+              <circle id="hDot" r="7" fill="#fff" stroke="#0A0A0A" stroke-width="3"/>
+            </g>
+            <g id="months" font-size="16" fill="#7A7A7A" text-anchor="middle"></g>
+          </svg>
+          <div id="tip" class="a num" style="padding:8px 14px;border-radius:999px;background:#fff;color:#0A0A0A;font-size:20px;font-weight:600;white-space:nowrap">$12.4k</div>
+        </div>
+
+        <div id="L_palette" class="a" style="left:-280px;top:0;width:560px;height:0">
+          <div id="palInput" class="a row" style="left:0;width:560px;height:84px;gap:14px">
+            <svg style="margin-left:26px" width="26" height="26" viewBox="0 0 24 24" color="#8F8F8F"><g class="ic" data-size="26"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></g></svg>
+            <div class="row" style="font-size:24px;height:84px">
+              <span id="typed" style="color:#fff"></span><span id="caret" style="display:inline-block;width:2px;height:28px;background:#fff;margin-left:1px"></span><span id="ph" style="color:#6B6B6B;margin-left:2px">Search…</span>
+            </div>
+            <div style="margin-left:auto;margin-right:24px;font-size:16px;color:#8F8F8F;border:1px solid #333;border-radius:8px;padding:4px 8px">⌘K</div>
+          </div>
+          <div id="palDiv" class="a" style="left:0;width:560px;height:1px;background:#232323"></div>
+          <div id="palRows"></div>
+        </div>
+
+        <div id="L_toast" class="a" style="left:-220px;top:-42px;width:440px;height:84px">
+          <svg class="a" style="left:25px;top:31px" width="22" height="22" viewBox="0 0 24 24"><path id="toastCheck" d="M5.5 12.5l4 4 9-9" class="ic" style="color:#0A0A0A" pathLength="1" stroke-dasharray="1 1" data-size="22"/></svg>
+          <div class="a row" style="left:74px;top:0;height:84px;font-size:22px;gap:8px">
+            <span style="color:#fff;font-weight:500">Exported</span><span style="color:#8F8F8F">chart.csv</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <svg id="cursor" viewBox="-2 -2 22 30"><path d="M0 0V22.5L5.6 17.2L9.4 26L13 24.5L9.3 15.9H16.8Z" fill="#0A0A0A" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+</div>
+<div id="hud"><button id="play">Play with sound</button></div>
+
+<script>
+/* =====================================================================
+   One Shape — every style is a pure function of t (seconds, 0..14).
+   120 BPM, 7 bars, 28 beats. Beat n (1-based) starts at (n-1) * 0.5 s.
+   ===================================================================== */
+const T = 14, BEAT = 0.5;
+const b = n => (n - 1) * BEAT;
+
+/* ---------- springs: closed-form step response ---------- */
+// [frequency Hz, damping ratio]. zeta < 1 gives a tiny overshoot at most (~1%).
+const P = {
+  shape:  [2.3, 0.82],
+  cam:    [1.45, 0.92],
+  ui:     [3.4, 0.85],
+  fast:   [5.5, 1.0],
+  cursor: [2.7, 1.0],
+  lead:   [3.8, 0.80],
+  trail:  [2.0, 0.90],
+  draw:   [1.9, 1.0],
+};
+function step(tau, [f, z]) {
+  if (tau <= 0) return 0;
+  const w = 2 * Math.PI * f;
+  if (z >= 1) return 1 - Math.exp(-w * tau) * (1 + w * tau);
+  const wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * tau) * (Math.cos(wd * tau) + (z * w / wd) * Math.sin(wd * tau));
+}
+// Free response of a displaced spring (x0, v0) returning to 0.
+function free(tau, x0, v0, [f, z]) {
+  if (tau <= 0) return x0;
+  const w = 2 * Math.PI * f;
+  if (z >= 1) return Math.exp(-w * tau) * (x0 + (v0 + w * x0) * tau);
+  const wd = w * Math.sqrt(1 - z * z);
+  return Math.exp(-z * w * tau) * (x0 * Math.cos(wd * tau) + ((v0 + z * w * x0) / wd) * Math.sin(wd * tau));
+}
+
+/* A channel is the sum of one spring per target change: v(t) = v0 + Σ Δi·step(t - ti).
+   Periodic channels also sum the two previous loops, so v(t) = v(t + 14) exactly
+   (the targets return to v0 each loop, so older loops cancel). */
+function channel(v0, keys, periodic = false) {
+  let prev = v0;
+  const ev = keys.map(([t, v, p = 'shape']) => { const d = v - prev; prev = v; return { t, d, p: P[p] || p }; });
+  if (periodic && Math.abs(prev - v0) > 1e-9) throw new Error('periodic channel must end at its start value');
+  return t => {
+    let v = v0;
+    for (let k = 0; k < (periodic ? 3 : 1); k++)
+      for (const e of ev) v += e.d * step(t + k * T - e.t, e.p);
+    return v;
+  };
+}
+// Content visibility: enter after tin, exit at tout, wrapped around the loop.
+function vis(t, tin, tout) {
+  const f = x => Math.min(1, step(x - tin, [4.2, 1])) * (1 - Math.min(1, step(x - tout, [6, 1])));
+  return Math.max(f(t), f(t + T), f(t - T));
+}
+// A click: quick press, spring release.
+function press(t, td, tu = td + 0.1) {
+  let v = 0;
+  for (const k of [-1, 0, 1]) v += step(t - td + k * T + 0.03, P.fast) - step(t - tu + k * T, P.ui);
+  return Math.max(0, v);
+}
+const lerp = (a, c, x) => a + (c - a) * x;
+const clamp = (x, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
+const mix = (c1, c2, x) => `rgb(${c1.map((c, i) => Math.round(lerp(c, c2[i], x))).join(',')})`;
+const INK = [10, 10, 10], PAPER = [255, 255, 255], CANVAS = [234, 231, 226];
+
+/* ---------- the shape (periodic: the loop closes on itself) ---------- */
+// [time, w, h, radius, zoom]
+const S = [
+  [b(2),  80,  80, 40, 3.1],   // loader
+  [b(4),  80,  80, 40, 3.35],  // check (tiny push-in)
+  [b(5), 360,  84, 42, 2.25],  // dynamic island
+  [b(7), 460, 300, 40, 1.9],   // player
+  [b(12), 460, 96, 48, 1.8],   // volume
+  [b(16), 150, 84, 42, 2.9],   // toggle
+  [b(18), 480, 84, 42, 2.0],   // tabs
+  [b(21), 600, 480, 44, 1.6],  // chart
+  [b(25), 560, 401, 28, 1.78], // command palette (5 results)
+  [12.625, 560, 221, 28, 1.95],// filtered to 2
+  [b(27), 440, 84, 42, 2.2],   // toast
+  [b(28), 300, 80, 40, 2.4],   // back to the button
+];
+const BTN = [300, 80, 40, 2.4];
+const shapeW = channel(BTN[0], S.map(s => [s[0], s[1]]), true);
+const shapeH = channel(BTN[1], S.map(s => [s[0], s[2]]), true);
+const shapeR = channel(BTN[2], S.map(s => [s[0], s[3]]), true);
+const zoom   = channel(BTN[3], S.map(s => [s[0], s[4], 'cam']), true);
+const dark   = channel(1, [[b(7), 0, 'fast'], [b(17), 1, 'fast']], true); // white player → black from the toggle on
+
+/* ---------- cursor (periodic, world coordinates) ---------- */
+const CX = [40, 8];
+const curKeys = [
+  [0.25, 120, 60],   // drift off the loader
+  [2.45, 60, 10],    // onto the island
+  [3.1, 0, 100],     // play button
+  [3.62, -50, 20],   // progress knob
+  [4.3, 119, 22],    // scrub (held)
+  [5.5, 131, 2],     // volume knob
+  [6.08, 205, 2],    // drag to max (held)
+  [6.5, 318, 5],     // past max: the slider stretches
+  [7.4, 4, 4],       // toggle
+  [8.55, 0, 4],      // "Week"
+  [9.08, 154.67, 4], // "Month"
+  [10.55, 0, 0],     // hover point 7 (x/y filled below)
+  [11.08, 0, 0],     // hover the peak
+  [12.1, 305, 172],  // out of the way while typing
+  [13.45, 40, 8],    // home, arriving at the same speed it left
+];
+/* ---------- chart data ---------- */
+const DATA = [8.2, 9.1, 8.7, 10.4, 9.8, 11.6, 12.4, 11.2, 14.8, 18.9, 16.2, 17.5];
+const PX0 = -268, PX1 = 268, PY0 = -20, PY1 = 180, VMIN = 6, VMAX = 20;
+const px = i => PX0 + i * (PX1 - PX0) / (DATA.length - 1);
+const py = v => PY1 - (v - VMIN) / (VMAX - VMIN) * (PY1 - PY0);
+curKeys[11][1] = px(6) + 4; curKeys[11][2] = py(DATA[6]) + 6;
+curKeys[12][1] = px(9) + 4; curKeys[12][2] = py(DATA[9]) + 6;
+const curX = channel(CX[0], curKeys.map(k => [k[0], k[1], 'cursor']), true);
+const curY = channel(CX[1], curKeys.map(k => [k[0], k[2], 'cursor']), true);
+// Every press: [down, up]
+const PRESSES = [[0, 0.1], [3.0, 3.1], [3.5, 3.6], [4.0, 5.0], [6.0, 7.0], [8.0, 8.1], [9.0, 9.1], [9.5, 9.6]];
+
+/* ---------- progress / volume: direct manipulation ---------- */
+const RATE = 1 / 114;            // song length 1:54
+const P0 = 0.37;
+const PW = 396, VW = 344;        // track widths (player, volume)
+function progress(t) {           // player (3.0 – 5.5)
+  if (t < 3.5) return P0;
+  if (t < 4.0) return P0 + (t - 3.5) * RATE;
+  const pg = P0 + 0.5 * RATE;
+  if (t < 5.0) return pg + (curX(t) - curX(4.0)) / PW;  // held: follows the cursor
+  return pg + (curX(5.0) - curX(4.0)) / PW + (t - 5.0) * RATE;
+}
+const rubber = o => o * 0.55 / (1 + o / 220);
+function volumeRaw(t) {          // volume (5.5 – 7.5)
+  const vs = progress(5.5);
+  if (t < 6.0) return vs;
+  if (t < 7.0) return vs + (curX(t) - curX(6.0)) / VW;
+  return vs + (curX(7.0) - curX(6.0)) / VW;
+}
+function stretch(t) {            // overscroll past max, springs back from wherever it was on release
+  const held = x => rubber(Math.max(0, volumeRaw(x) - 1) * VW);
+  if (t < 6.0) return 0;
+  if (t < 7.0) return held(t);
+  const x0 = held(6.9999), v0 = (held(6.9999) - held(6.9899)) / 0.01;
+  return free(t - 7.0, x0, v0, P.ui);
+}
+
+/* ---------- track & knob ---------- */
+const trL = channel(-198, [[b(12), -146]]);
+const trR = channel(198, []);
+const trY = channel(20, [[b(12), 0]]);
+const trH = channel(8, [[4.0, 12, 'ui'], [5.0, 8, 'ui'], [6.0, 12, 'ui'], [7.0, 8, 'ui']]);
+const knS = channel(0, [[3.0, 16, 'ui'], [4.0, 30, 'ui'], [5.0, 18, 'ui'], [5.5, 22, 'ui'], [6.0, 30, 'ui'], [7.0, 22, 'ui']]);
+function knobEarly(t) {          // 3.0 – 7.5: rides the track
+  const L = trL(t), R = trR(t) + stretch(t), y = trY(t), s = knS(t);
+  const v = t < 5.5 ? progress(t) : Math.min(1, volumeRaw(t));
+  const x = L + v * (R - L);
+  return { L: x - s / 2, R: x + s / 2, T: y - s / 2, B: y + s / 2 };
+}
+const K0 = knobEarly(b(16));
+// Toggle → tabs → chart header → palette highlight → toast icon.
+// Left and right edges ride different springs so the leading edge stretches ahead.
+const SEG = (480 - 16) / 3;
+const kL = channel(K0.L, [[b(16), -67, 'lead'], [b(17), -1, 'trail'], [b(18), -232, 'lead'], [b(19), -232 + SEG, 'trail'], [b(20), -232 + 2 * SEG, 'trail'], [b(25), -272], [b(27), -202], [b(28), -184, 'ui']]);
+const kR = channel(K0.R, [[b(16), 1, 'trail'], [b(17), 67, 'lead'], [b(18), -232 + SEG, 'trail'], [b(19), -232 + 2 * SEG, 'lead'], [b(20), 232, 'lead'], [b(25), 272], [b(27), -166], [b(28), -184, 'ui']]);
+const kT = channel(K0.T, [[b(16), -34], [b(21), -224], [b(25), -107.5], [12.625, -17.5], [b(27), -18], [b(28), 0, 'ui']]);
+const kB = channel(K0.B, [[b(16), 34], [b(21), -156], [b(25), -47.5], [12.625, 42.5], [b(27), 18], [b(28), 0, 'ui']]);
+const kC = channel(10, [[b(17), 255, 'fast'], [b(25), 38, 'ui'], [b(27), 255, 'ui']]);
+const kRad = channel(40, [[b(25), 14], [b(27), 40]]);
+function knob(t) {
+  if (t < b(16)) return knobEarly(t);
+  return { L: kL(t), R: kR(t), T: kT(t), B: kB(t) };
+}
+
+/* ---------- tabs / chart / palette helpers ---------- */
+const rowY = channel(0, [[b(21), -190]]);
+const hoverX = channel(px(6), [[b(24), px(9), 'ui']]);
+const hoverY = channel(py(DATA[6]), [[b(24), py(DATA[9]), 'ui']]);
+const tipVal = channel(DATA[6], [[b(24), DATA[9], 'ui']]);
+const ITEMS = [
+  { label: 'Open settings',     hint: '⌘ ,',   icon: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>', keep: false },
+  { label: 'Export chart.csv',  hint: '⌘ E',   icon: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>', keep: true, to: 0 },
+  { label: 'Share dashboard',   hint: '⌘ ⇧ S', icon: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>', keep: false },
+  { label: 'Export report.pdf', hint: '⌘ ⇧ E', icon: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>', keep: true, to: 1 },
+  { label: 'Invite teammate',   hint: '⌘ I',   icon: '<circle cx="9" cy="8" r="4"/><path d="M3 20a6 6 0 0 1 12 0M19 8v6M16 11h6"/>', keep: false },
+];
+ITEMS.forEach((it, i) => { it.slot = channel(i, it.keep ? [[12.625, it.to]] : []); });
+const TYPED = [[b(26), 'e'], [12.625, 'ex'], [12.75, 'exp']];
+
+/* ---------- UI sounds (placed by their measured peak in the mix) ---------- */
+window.SOUNDS = [
+  { t: 0.0, sfx: 'click' }, { t: b(4), sfx: 'chime' }, { t: 3.0, sfx: 'click' }, { t: 3.5, sfx: 'click' },
+  { t: 4.0, sfx: 'click', gain: 0.55 }, { t: 5.0, sfx: 'tick', gain: 0.5 },
+  { t: 6.0, sfx: 'click', gain: 0.55 }, { t: 7.0, sfx: 'tick', gain: 0.6 },
+  { t: 8.0, sfx: 'switch' }, { t: 9.0, sfx: 'tick' }, { t: 9.5, sfx: 'tick' },
+  { t: 10.0, sfx: 'whoosh', gain: 0.35 }, { t: 11.0, sfx: 'tick', gain: 0.3 }, { t: 11.5, sfx: 'tick', gain: 0.3 },
+  { t: 12.5, sfx: 'key1' }, { t: 12.625, sfx: 'key2' }, { t: 12.75, sfx: 'key3' },
+  { t: 13.0, sfx: 'key1', gain: 1.2 }, { t: 13.06, sfx: 'chime', gain: 0.8 },
+];
+window.DURATION = T;
+
+/* =====================================================================
+   DOM setup (static structure only — no animation state lives here)
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const px_ = v => v.toFixed(3) + 'px';
+function box(el, L, Tp, W, H) { const s = el.style; s.left = px_(L); s.top = px_(Tp); s.width = px_(Math.max(0, W)); s.height = px_(Math.max(0, H)); }
+function fade(el, v, blur = 10) {
+  const s = el.style;
+  s.opacity = v.toFixed(4);
+  s.filter = v > 0.999 ? 'none' : `blur(${((1 - v) * blur).toFixed(2)}px)`;
+  s.visibility = v < 0.001 ? 'hidden' : 'visible';
+  return s;
+}
+// All stroked icons share one stroke weight in world units.
+const STROKE = 2.5;
+document.querySelectorAll('[data-size]').forEach(el => el.setAttribute('stroke-width', (STROKE * 24 / +el.dataset.size).toFixed(3)));
+
+$('track').style.cssText += 'background:#E6E3DE;overflow:hidden';
+$('fill').style.cssText += 'left:0;top:0;height:100%;background:#0A0A0A';
+document.querySelectorAll('.art').forEach(a => {
+  a.style.background = '#E9E6E1';
+  const d = parseFloat(a.style.width);
+  a.innerHTML = `<div class="a" style="left:${d * .29}px;top:${d * .29}px;width:${d * .42}px;height:${d * .42}px;border-radius:50%;background:#0A0A0A"></div>
+                 <div class="a" style="left:${d * .45}px;top:${d * .45}px;width:${d * .1}px;height:${d * .1}px;border-radius:50%;background:#E9E6E1"></div>`;
+});
+for (let i = 0; i < 4; i++) $('bars').insertAdjacentHTML('beforeend', `<div class="a" style="left:${i * 12}px;width:6px;border-radius:3px;background:#fff"></div>`);
+
+// Tabs: two copies of the labels; the top copy is clipped to the knob.
+const TAB_BOX = 300;
+['tabsBase', 'tabsClip'].forEach((id, k) => {
+  const el = $(id); box(el, -TAB_BOX, -TAB_BOX, 2 * TAB_BOX, 2 * TAB_BOX);
+  ['Day', 'Week', 'Month'].forEach((w, i) => el.insertAdjacentHTML('beforeend',
+    `<div class="a tab" style="left:${TAB_BOX - 232 + i * SEG}px;width:${SEG}px;height:40px;line-height:40px;text-align:center;font-size:24px;font-weight:500;color:${k ? '#0A0A0A' : '#9B9B9B'}">${w}</div>`));
+});
+$('tabBg').style.cssText += 'background:#1C1C1C;border-radius:42px';
+
+// Chart
+(() => {
+  const g = $('grid');
+  for (let i = 0; i < 4; i++) { const y = lerp(PY0, PY1, i / 3); g.insertAdjacentHTML('beforeend', `<line x1="${PX0}" x2="${PX1}" y1="${y}" y2="${y}" stroke="#232323" stroke-width="1"/>`); }
+  ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'].forEach((m, i) => $('months').insertAdjacentHTML('beforeend', `<text x="${px(2 * i)}" y="${PY1 + 30}">${m}</text>`));
+  const pts = DATA.map((v, i) => [px(i), py(v)]);
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {   // Catmull-Rom → cubic Bézier
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C${c1[0].toFixed(2)},${c1[1].toFixed(2)} ${c2[0].toFixed(2)},${c2[1].toFixed(2)} ${p2[0]},${p2[1]}`;
+  }
+  $('line').setAttribute('d', d);
+  $('line').setAttribute('stroke-width', STROKE);
+  $('area').setAttribute('d', `${d} L${PX1},${PY1} L${PX0},${PY1} Z`);
+  $('hLine').setAttribute('y1', PY0 - 10); $('hLine').setAttribute('y2', PY1);
+})();
+
+// Palette rows
+ITEMS.forEach((it, i) => $('palRows').insertAdjacentHTML('beforeend',
+  `<div class="a row prow" style="left:0;width:560px;height:60px;gap:16px">
+     <svg style="margin-left:28px" width="24" height="24" viewBox="0 0 24 24" color="#A3A3A3"><g class="ic" stroke-width="${STROKE}">${it.icon}</g></svg>
+     <span style="font-size:22px;color:#fff">${it.label}</span>
+     <span style="margin-left:auto;margin-right:28px;font-size:16px;color:#6B6B6B">${it.hint}</span>
+   </div>`));
+const prows = [...document.querySelectorAll('.prow')];
+
+// Play ↔ pause: two quads that morph between the halves of a triangle and two bars.
+const PLAY  = [[8, 5], [13.5, 8.5], [13.5, 15.5], [8, 19], [13.5, 8.5], [19, 12], [19, 12], [13.5, 15.5]];
+const PAUSE = [[7, 5], [10.5, 5], [10.5, 19], [7, 19], [13.5, 5], [17, 5], [17, 19], [13.5, 19]];
+const pp = channel(0, [[b(8), 1, 'ui']]);
+
+const fmt = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+/* =====================================================================
+   seek(t): the whole frame from t. No transitions, no timers, no state.
+   ===================================================================== */
+function seek(tIn) {
+  const t = ((tIn % T) + T) % T;
+  const z = zoom(t);
+
+  // shape
+  const st = t >= 6 && t < 8 ? stretch(t) : 0;
+  const w = shapeW(t), h = shapeH(t) - st * 0.12;
+  const W = w + st, r = Math.min(shapeR(t), h / 2, W / 2);
+  const shapePress = press(t, 0) + press(t, 3.0, 3.1) + press(t, 8.0, 8.1);
+  $('cam').style.transform = `scale(${z.toFixed(5)})`;
+  const sh = $('shape').style;
+  box($('shape'), -w / 2, -h / 2, W, h);
+  sh.borderRadius = px_(r);
+  sh.background = mix(PAPER, INK, clamp(dark(t)));
+  sh.transform = `scale(${(1 - 0.035 * shapePress).toFixed(5)})`;
+  sh.transformOrigin = `${px_(w / 2)} ${px_(h / 2)}`;
+  const wo = $('world').style; wo.left = px_(w / 2); wo.top = px_(h / 2);
+
+  // button
+  fade($('L_btn'), vis(t, b(28) + 0.08, b(2) + T));
+
+  // loader → check
+  const lv = vis(t, b(2) + 0.08, b(5));
+  fade($('L_loader'), lv);
+  if (lv > 0) {
+    const close = step(t - 1.2, P.ui);
+    $('spinArc').setAttribute('stroke-dasharray', `${(0.22 + 0.78 * close).toFixed(4)} 1`);
+    const rot = 360 * 1.5 * (t - b(2)) - 90;
+    $('spinArc').setAttribute('transform', `rotate(${rot.toFixed(2)} 12 12)`);
+    $('loaderCheck').setAttribute('stroke-dashoffset', (1 - clamp(step(t - b(4), P.draw))).toFixed(4));
+  }
+
+  // island
+  const iv = vis(t, b(6) + 0.08, b(7));
+  fade($('L_island'), iv);
+  if (iv > 0) [...$('bars').children].forEach((bar, i) => {
+    const hh = 10 + 22 * Math.pow(0.5 + 0.5 * Math.sin(2 * Math.PI * 2 * t + i * 1.7), 1.4);
+    bar.style.top = px_(42 - hh / 2); bar.style.height = px_(hh);
+  });
+
+  // player
+  const pv = vis(t, b(7) + 0.08, b(12));
+  fade($('L_player'), pv);
+  if (pv > 0) {
+    const p = progress(t);
+    $('tEl').textContent = fmt(p * 114);
+    $('tRem').textContent = '-' + fmt((1 - p) * 114);
+    const m = clamp(pp(t), -0.05, 1.05);
+    const q = PLAY.map((a, i) => [lerp(a[0], PAUSE[i][0], m), lerp(a[1], PAUSE[i][1], m)]);
+    const quad = o => `M${q[o].join(',')}L${q[o + 1].join(',')}L${q[o + 2].join(',')}L${q[o + 3].join(',')}Z`;
+    $('ppPath').setAttribute('d', quad(0) + quad(4));
+    $('playBtn').style.transform = `scale(${(1 - 0.08 * press(t, 3.5, 3.6)).toFixed(4)})`;
+  }
+
+  // volume icon
+  fade($('L_vol'), vis(t, b(12) + 0.08, b(16)));
+
+  // track + knob
+  const tv = vis(t, b(7) + 0.08, b(16));
+  const k = knob(t);
+  fade($('track'), tv, 6);
+  if (tv > 0) {
+    const L = trL(t), R = trR(t) + st, y = trY(t), th = trH(t);
+    box($('track'), L, y - th / 2, R - L, th);
+    $('track').style.borderRadius = px_(th / 2);
+    $('fill').style.width = px_((k.L + k.R) / 2 - L);
+  }
+  const kv = t >= 3.0 && t < b(28) + 0.4 ? 1 - clamp(step(t - b(28), P.fast)) : 0;
+  const ks = $('knob').style;
+  ks.visibility = kv > 0.001 ? 'visible' : 'hidden';
+  if (kv > 0.001) {
+    box($('knob'), k.L, k.T, k.R - k.L, k.B - k.T);
+    const kr = Math.min(kRad(t), (k.R - k.L) / 2, (k.B - k.T) / 2);
+    ks.borderRadius = px_(Math.max(0, kr));
+    const c = t < b(16) ? 10 : clamp(kC(t), 0, 255);
+    ks.background = `rgb(${Math.round(c)},${Math.round(c)},${Math.round(c)})`;
+    ks.opacity = kv.toFixed(4);
+  }
+
+  // tabs (base labels + copy clipped to the knob)
+  const tb = vis(t, b(18) + 0.08, b(25));
+  const ry = rowY(t);
+  for (const id of ['tabsBase', 'tabsClip']) {
+    const el = $(id); fade(el, tb);
+    if (tb > 0) [...el.children].forEach(c => c.style.top = px_(TAB_BOX + ry - 20));
+  }
+  if (tb > 0) {
+    const kr = Math.min(kRad(t), (k.R - k.L) / 2, (k.B - k.T) / 2);
+    $('tabsClip').style.clipPath =
+      `inset(${px_(TAB_BOX + k.T)} ${px_(TAB_BOX - k.R)} ${px_(TAB_BOX - k.B)} ${px_(TAB_BOX + k.L)} round ${px_(Math.max(0, kr))})`;
+  }
+  const tbg = vis(t, b(21) + 0.08, b(25));
+  fade($('tabBg'), tbg);
+  if (tbg > 0) box($('tabBg'), -240, ry - 42, 480, 84);
+
+  // chart
+  const cv = vis(t, b(21) + 0.08, b(25));
+  fade($('L_chart'), cv);
+  if (cv > 0) {
+    const d = clamp(step(t - b(22), P.draw));
+    $('line').setAttribute('stroke-dashoffset', (1 - d).toFixed(4));
+    $('drawRect').setAttribute('width', (32 + d * (PX1 - PX0)).toFixed(2));
+    const hv = vis(t, b(23), b(25));
+    const hx = hoverX(t), hy = hoverY(t);
+    $('hover').style.opacity = hv.toFixed(4);
+    $('hLine').setAttribute('x1', hx); $('hLine').setAttribute('x2', hx);
+    $('hDot').setAttribute('cx', hx); $('hDot').setAttribute('cy', hy);
+    const tip = $('tip');
+    tip.textContent = `$${tipVal(t).toFixed(1)}k`;
+    tip.style.left = px_(hx + 300); tip.style.top = px_(hy + 240 - 22);
+    tip.style.transform = `translate(-50%, -100%) translateY(${((1 - hv) * 8).toFixed(2)}px)`;
+    fade(tip, hv, 6);
+  }
+
+  // command palette
+  const pal = vis(t, b(25) + 0.08, b(27));
+  fade($('L_palette'), pal);
+  if (pal > 0) {
+    const top = -h / 2;
+    $('L_palette').style.top = px_(top);
+    $('palDiv').style.top = '84px';
+    const typed = TYPED.reduce((s, [tt, v]) => (t >= tt ? v : s), '');
+    $('typed').textContent = typed;
+    $('ph').style.display = typed ? 'none' : '';
+    ITEMS.forEach((it, i) => {
+      const el = prows[i];
+      fade(el, vis(t, b(25) + 0.08 + i * 0.03, it.keep ? b(27) : 12.625), 8);
+      el.style.top = px_(93 + it.slot(t) * 60);
+    });
+  }
+
+  // toast
+  const tsv = vis(t, b(27) + 0.08, b(28));
+  fade($('L_toast'), tsv);
+  if (tsv > 0) $('toastCheck').setAttribute('stroke-dashoffset', (1 - clamp(step(t - 13.1, P.draw))).toFixed(4));
+
+  // cursor (screen space; the camera never scales it)
+  const cx = 720 + curX(t) * z, cy = 720 + curY(t) * z;
+  let pr = 0; for (const [d0, u0] of PRESSES) pr += press(t, d0, u0);
+  const cs = $('cursor').style;
+  cs.transform = `translate(${(cx - 2).toFixed(2)}px, ${(cy - 2).toFixed(2)}px) scale(${(2.1 * (1 - 0.12 * clamp(pr))).toFixed(4)})`;
+}
+window.seek = seek;
+
+/* ---------- live playback (outside seek; the render never uses this) ---------- */
+const params = new URLSearchParams(location.search);
+if (params.has('render')) {
+  document.body.classList.add('render');
+} else {
+  const fit = () => { const s = Math.min(innerWidth, innerHeight) / 1440; $('stage').style.transform = `scale(${s})`; };
+  addEventListener('resize', fit); fit();
+  const audio = new Audio('out/loop.m4a'); audio.loop = true;
+  let t0 = performance.now();
+  $('play').onclick = () => {
+    if (audio.paused) { audio.currentTime = 0; audio.play(); $('play').textContent = 'Pause'; }
+    else { audio.pause(); $('play').textContent = 'Play with sound'; }
+  };
+  const tick = now => { seek(audio.paused ? (now - t0) / 1000 : audio.currentTime); requestAnimationFrame(tick); };
+  document.fonts.ready.then(() => requestAnimationFrame(tick));
+}
+document.fonts.ready.then(() => { window.READY = true; });
+</script>
+</body>
+</html>
